@@ -27,9 +27,20 @@ num.cores <- 8
 input_dir <- "~/EpiBORL/git/EPIC_data/idat/"
 output_dir <- "~/EpiBORL/paper/scripts/files/"
 
+epic_manifest <- "~/EpiBORL/git/EPIC_data/sesame_EPICV2_hg38_manifest.txt"
+epic_annot_gene <- "/data/kdi_prod/.kdi/project_workspace_0/1975/acl/01.00/git/EPIC_data/EPICv2.hg38.manifest.gencode.v41.tsv"
+oncokb_file <- "~/GIT/snpeff_update/oncokb_genes.txt"
+
+in_dir <- "~/EpiBORL/git/scripts/rmd_files"
+
+champ_dmp_epicv2 <- "~/EpiBORL/git/scripts/champ.DMP.R"
+champ_dmr_epicv2 <- "~/EpiBORL/git/scripts/champ.DMR.R"
+
+
+
 # getting beta values using sesame and their processing QCDPB
 
-addr <- read.table("~/EpiBORL/git/EPIC_data/sesame_EPICV2_hg38_manifest.txt",sep="\t",h=T)
+addr <- read.table(epic_manifest,sep="\t",h=T)
 prepv <- "QCDPB" #QualityMask, inferIniniumIChannel, dyeBiasNL, pOOBAH,noob
 
 betas <- openSesame(input_dir, prep=prepv, manifest=addr, BPPARAM = BiocParallel::MulticoreParam(num.cores), collapseToPfx = FALSE) #937690 probes
@@ -42,8 +53,6 @@ saveRDS(betas_imput,glue('{output_dir}/epiborl_betas_impute.Rds'))
 
 
 ## Description file 
-
-in_dir <- "~/EpiBORL/git/scripts/rmd_files"
 
 desc <- as_tibble(read.table(glue('{in_dir}/epiborl_sp_102024.txt'),h=T,sep="\t",check.names=F)) 
 desc_sp <- desc %>% dplyr::select(Bloc,Barcode_RNA,EPIC_sample,Array,Slide, `Best response`)  %>% 
@@ -60,12 +69,12 @@ rownames(desc_sp) <- desc_sp$IDAT
 
 ## Annotation using EPICv2 manifest
 
-gene <- read.table("/data/kdi_prod/.kdi/project_workspace_0/1975/acl/01.00/git/EPIC_data/EPICv2.hg38.manifest.gencode.v41.tsv",h=T,sep="\t") %>% 
+gene <- read.table(epic_annot_gene,h=T,sep="\t") %>% 
   as_tibble() %>% 
   mutate(Probe_ID=sapply(strsplit(probeID,"_"),"[",1)) %>% 
   dplyr::select(CpG_chrm:genesUniq,probeID,Probe_ID)
 
-onco <- read.table("~/GIT/snpeff_update/oncokb_genes.txt",h=T)
+onco <- read.table(oncokb_file,h=T)
 
 all_gene <- gene %>% 
   separate_rows(genesUniq,sep=";") %>% 
@@ -87,7 +96,7 @@ pval_thresh_dmr <- 0.05
 
 ##### using CHAMP
 
-source("~/EpiBORL/git/scripts/champ.DMP.R") # adapt for EPICv2
+source(champ_dmp_epicv2) # adapt for EPICv2
 
 # CR/PR vs SD/PD 
 
@@ -246,7 +255,7 @@ cpg_dru <- dm_dups %>%
 all_cpg <- dmp_sesame %>% distinct(probeID,.keep_all=TRUE) %>% as.data.frame()
 rownames(all_cpg) <- all_cpg$probeID 
 
-# annocol"DEGadj"=c("NS"="gray55","R>NR"="steelblue","R<NR"="tomato3"))
+annocol <- list("DEGadj" = c("NS"="gray55","R>NR"="steelblue","R<NR"="tomato3"))
 
 temp <- all_cpg %>% 
   left_join(cpg_dru[,c("Probe_ID","DEG","Method")]) %>% 
@@ -306,8 +315,7 @@ dev.off()
 
 #using ChAMP 
 
-source("~/EpiBORL/git/scripts/champ.DMR.R")
-
+source(champ_dmr_epicv2)
 
 betas_dmr <- betas_imput[,rownames(desc_sp)]
 rownames(betas_dmr) <- str_remove(rownames(betas_dmr),"\\_.*")
@@ -362,11 +370,6 @@ DMRgenes_onco <-  DMRgenes %>%
 myDMRt <-  myDMR_3000[[1]] %>% rownames_to_column("DMRindex") %>% dplyr::select(DMRindex,seqnames:width,p.valueArea) %>% left_join(DMRgenes)
 
 write.table(myDMRt,glue('{output_dir}/epiborl_champ_dup_bumphunter_maxGap3000_dmr_anno_crprsd_pd.txt'),quote=F,col.names=T,row.names=F,sep="\t")
-
-# >> head rmd_files_epic/epiborl_champ_dup_bumphunter_maxGap3000_dmr_anno.txt
-# DMRindex	seqnames	start	end	width	p.valueArea	gene	Onco
-# DMR_1	chr2	176109273	176122497	13224	1.88001729615912e-05	HOXD9	Unknown
-# DMR_2	chr12	22331223	22333550	2327	0.0060207553909496	NA	NA
 
 
 #### Using sesame

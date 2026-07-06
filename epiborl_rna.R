@@ -16,6 +16,7 @@ set.seed(1)
 
 in_dir <- "~/EpiBORL/git/scripts/rmd_files"
 out_dir <- "~/EpiBORL/paper/scripts"
+hpvkite_dir <- "~/EpiBORL/analyses/hpv-kite"
 
 # Description file 
 
@@ -96,7 +97,6 @@ desc_filter <- desc_filter %>% mutate(disease_type=gsub("NK",NA,disease_type),
 ## HPV RNAseq ##
 ################
 
-hpvkite_dir <- "~/EpiBORL/analyses/hpv-kite"
 tversky_thres <- 0.035
 
 lfile <- list.files(hpvkite_dir,"*txt",recursive=T,full.names=T)

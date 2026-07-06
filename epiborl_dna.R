@@ -6,6 +6,13 @@ library(RColorBrewer)
 options(scipen=0)
 set.seed(1)
 
+in_dir <- "~/EpiBORL/git/scripts/rmd_files"
+out_dir <- "~/EpiBORL/paper/scripts"
+
+hpvkite_file <- "~/EpiBORL/epibol_rna_wes_summary.txt"
+
+in_dir_files <- "/data/kdi_prod/.kdi/project_workspace_0/1975/acl/01.00/Share/From_Lyon_Wes_Mars_2025/vcf_annotated/reannot/oncodriver"
+
 # Pathway gene file 
 pathway_file <- "~/Pathways_DRAGON_07092021_v3.xlsx"
 
@@ -13,9 +20,6 @@ pathway <- read_excel(pathway_file) %>%
   pivot_longer(cols=everything(),names_to="Pathway",values_to="Gene",values_drop_na = TRUE) %>% arrange(Pathway)
 
 # Description file 
-
-in_dir <- "~/EpiBORL/git/scripts/rmd_files"
-out_dir <- "~/EpiBORL/paper/scripts"
 
 colum_desc <- c("ID","Best response","Primary site of cancer","Alcohols","Tobaccos", "Disease type","HPV_RNAseq_3.5%")
 
@@ -25,7 +29,6 @@ desc <- desc %>%   mutate("Alcohols"=if_else(Alcohol=="NON CONSUMER" ,"non consu
                   "Tobaccos"=if_else(Tobacco=="NON CONSUMER","non consumer","consumer")) %>%
                    mutate(`Disease type`=case_when(grepl("Loc",disease_type) ~ "Local",grepl("Meta",disease_type) ~ "Metastatic", disease_type == "Both" ~ "Both", TRUE ~ NA )) 
 
-hpvkite_file <- "~/EpiBORL/epibol_rna_wes_summary.txt"
 hpvkite <- read.table(hpvkite_file,sep="\t",h=T,check.names=F) %>% distinct()
 colnames(hpvkite) <- gsub("HPV","HPV16",colnames(hpvkite))
 
@@ -36,11 +39,8 @@ desc <- desc %>% left_join(hpvkite[,c("ID","HPV_RNAseq_3.5%")]) %>%
 
 # Variant after oncoDriver 
 
-in_dir_files <- "/data/kdi_prod/.kdi/project_workspace_0/1975/acl/01.00/Share/From_Lyon_Wes_Mars_2025/vcf_annotated/reannot/oncodriver"
-
 lfile <- list.files(in_dir_files,pattern=".oncodriver.txt",full.names=TRUE,recursive=TRUE)
 lfile <- lfile[grep("CDKN2A",lfile,invert=T)]
-
 
 res <- bind_rows(map(lfile,function(file){
 
@@ -72,7 +72,6 @@ res_pathway <- map_dfc(unique(pathway$Pathway),function(pthw){
 
 
 # CNV after oncoDriver
-
 
 lfile_cnv <- list.files(in_dir_files,pattern=".oncodriver.cnv.txt",full.names=TRUE,recursive=FALSE)
 
@@ -300,9 +299,6 @@ op <- oncoPrint(oncomat_op[,sample_order],
    right_annotation = rowAnnotation(
         rbar = anno_oncoprint_barplot(
             axis_param = list(side = "bottom",labels_rot = 0))),
-   # column_order = sample_order,
-   # row_order = gene_order,
-   # column_title = column_title,
    column_title_gp = gpar(fontsize = 0, col = "transparent"),
    column_names_gp = gpar(fontsize = 6),
    row_names_gp = gpar(fontsize = 9), 
